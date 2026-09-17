@@ -15,47 +15,47 @@ const logError = (message: string, error: any) => {
 // 图片压缩API
 const compressionAPI = {
   // 压缩单个图片
-  compressImage: (imagePath: string, settings: any, outputPath?: string) => {
+  compressImage: (imagePath: string, settings: any, outputPath?: string, originalFilename?: string) => {
     // 已删除日志
-    return ipcRenderer.invoke('compress-image', { imagePath, settings, outputPath });
+    return ipcRenderer.invoke('compress-image', { imagePath, settings, outputPath, originalFilename });
   },
-  
+
   // 批量压缩图片
-  batchCompressImages: (imagePaths: string[], settings: any, outputDir?: string) => {
+  batchCompressImages: (imagePaths: string[], settings: any, outputDir?: string, originalFilenames?: string[]) => {
     // 已删除日志
-    return ipcRenderer.invoke('batch-compress-images', { imagePaths, settings, outputDir });
+    return ipcRenderer.invoke('batch-compress-images', { imagePaths, settings, outputDir, originalFilenames });
   },
-  
+
   // 转换为WebP格式
   convertToWebp: (imagePath: string, settings: any, outputPath?: string) => {
     // 已删除日志
     return ipcRenderer.invoke('convert-to-webp', { imagePath, settings, outputPath });
   },
-  
+
   // 获取压缩预设
   getCompressionPreset: (presetName: string) => {
     // 已删除日志
     return ipcRenderer.invoke('get-compression-preset', presetName);
   },
-  
+
   // 选择输出目录
   selectOutputDirectory: () => {
     // 已删除日志
     return ipcRenderer.invoke('select-output-directory');
   },
-  
+
   // 清理临时文件
   clearTempFiles: () => {
     // 已删除日志
     return ipcRenderer.invoke('clear-temp-files');
   },
-  
+
   // 删除单个临时文件
   deleteTempFile: (filePath: string) => {
     // 已删除日志
     return ipcRenderer.invoke('delete-temp-file', filePath);
   },
-  
+
   // 监听压缩进度
   onCompressionProgress: (callback: (data: any) => void) => {
     // 已删除日志
@@ -65,13 +65,13 @@ const compressionAPI = {
       ipcRenderer.removeAllListeners('compression-progress');
     };
   },
-  
+
   // 保存压缩设置到配置文件
   saveCompressionSettings: (settings: any) => {
     // 已删除日志
     return ipcRenderer.invoke('save-compression-settings', settings);
   },
-  
+
   // 从配置文件获取压缩设置
   getCompressionSettings: () => {
     // 已删除日志
@@ -127,7 +127,7 @@ const statsAPI = {
       });
     }
   },
-  
+
   // 获取最近处理的图片
   getRecentImages: (limit = 10) => {
     // 已删除日志
@@ -146,7 +146,7 @@ const statsAPI = {
       return Promise.resolve({ success: true, images: [] });
     }
   },
-  
+
   // 添加处理记录
   addProcessedImage: (image: any) => {
     // 已删除日志
@@ -165,7 +165,7 @@ const statsAPI = {
       return Promise.resolve({ success: false, error: '添加处理记录失败' });
     }
   },
-  
+
   // 清除所有统计数据
   clearAllData: () => {
     // 已删除日志

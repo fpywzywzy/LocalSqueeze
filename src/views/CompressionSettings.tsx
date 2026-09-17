@@ -14,7 +14,7 @@ interface CompressionSettingsType extends CompressionSettingsInterface {
 export default function CompressionSettings() {
   // 导航钩子
   const navigate = useNavigate();
-  
+
   // 压缩预设状态
   const [activePreset, setActivePreset] = useState<string>('低压缩');
   // 压缩质量状态
@@ -36,10 +36,10 @@ export default function CompressionSettings() {
   const [outputFormat, setOutputFormat] = useState<string>('PNG');
   // 文件命名状态
   const [fileNaming, setFileNaming] = useState<string>('{filename}_compressed');
-  
+
   // 加载状态
   const [isLoading, setIsLoading] = useState<boolean>(true);
-  
+
   // 预览状态
   const [previewResult, setPreviewResult] = useState<{
     original: { size: string, dimensions: string },
@@ -51,11 +51,11 @@ export default function CompressionSettings() {
     const loadSettings = async () => {
       try {
         setIsLoading(true);
-        
+
         // 从配置文件加载上次的设置
         const settings = await getCompressionSettings();
 
-        
+
         // 应用保存的设置
         setActivePreset(settings.preset || '低压缩');
         setCompressionQuality(settings.quality || 70);
@@ -70,11 +70,11 @@ export default function CompressionSettings() {
           optimizeColors: settings.optimizeColors !== undefined ? settings.optimizeColors : false,
           progressive: settings.progressive !== undefined ? settings.progressive : false
         });
-        
+
         // 确保keepFormat和outputFormat正确设置
         const keepFormatValue = settings.keepFormat !== undefined ? settings.keepFormat : true;
         setKeepFormat(keepFormatValue);
-        
+
         // 确保输出格式正确设置，即使keepFormat为true
         if (settings.outputFormat) {
           setOutputFormat(settings.outputFormat.toUpperCase());
@@ -82,17 +82,17 @@ export default function CompressionSettings() {
         } else {
           setOutputFormat('PNG');
         }
-        
+
         setFileNaming(settings.fileNaming || '{filename}_compressed');
-        
+
         // 生成预览结果
         setTimeout(() => generatePreview(), 100);
-        
+
         setIsLoading(false);
       } catch (error) {
 
         setIsLoading(false);
-        
+
         // 如果加载失败，使用默认设置
         setActivePreset('低压缩');
         setCompressionQuality(70);
@@ -105,7 +105,7 @@ export default function CompressionSettings() {
         setFileNaming('{filename}_compressed');
       }
     };
-    
+
     loadSettings();
   }, []);
 
@@ -114,7 +114,7 @@ export default function CompressionSettings() {
     setCompressionQuality(settings.quality);
     setKeepDimensions(settings.keepDimensions);
     setKeepFormat(settings.keepFormat);
-    
+
     // 如果有尺寸设置
     if (!settings.keepDimensions && settings.width && settings.height) {
       setDimensions({
@@ -122,7 +122,7 @@ export default function CompressionSettings() {
         height: settings.height
       });
     }
-    
+
     // 如果有输出格式
     if (!settings.keepFormat && settings.outputFormat) {
       // 在UI中显示大写的格式名称
@@ -135,10 +135,10 @@ export default function CompressionSettings() {
   const handlePresetClick = async (preset: string) => {
     try {
 
-      
+
       // 设置活动预设
       setActivePreset(preset);
-      
+
       // 从后端获取预设设置
       if (window.compression) {
         const presetSettings = await window.compression.getCompressionPreset(preset);
@@ -168,20 +168,20 @@ export default function CompressionSettings() {
             break;
         }
       }
-      
+
       // 使用Promise和setTimeout确保状态更新后再保存
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // 更新预览
       generatePreview();
-      
+
       // 再次确保activePreset已更新
       await new Promise(resolve => setTimeout(resolve, 100));
-      
+
       // 手动构建设置对象，确保使用最新的预设名称
       const compressionRate = preset === '低压缩' ? 20 : preset === '中等压缩' ? 40 : preset === '高压缩' ? 60 : 100 - compressionQuality;
       const quality = 100 - compressionRate;
-      
+
       const settings = {
         preset: preset,
         quality: quality,
@@ -197,10 +197,10 @@ export default function CompressionSettings() {
         outputFormat: outputFormat.toLowerCase(), // 确保保存小写的格式名称
         fileNaming
       };
-      
+
 
       await saveCompressionSettings(settings);
-      
+
     } catch (error) {
       console.error(`应用预设 ${preset} 失败:`, error);
     }
@@ -209,10 +209,10 @@ export default function CompressionSettings() {
   // 处理尺寸变化
   const handleDimensionChange = (dimension: 'width' | 'height', value: string) => {
     const numValue = parseInt(value, 10) || 0;
-    
+
     if (keepRatio && dimensions.width > 0 && dimensions.height > 0) {
       const ratio = dimensions.width / dimensions.height;
-      
+
       if (dimension === 'width') {
         setDimensions({
           width: numValue,
@@ -230,10 +230,10 @@ export default function CompressionSettings() {
         [dimension]: numValue,
       });
     }
-    
+
     // 更新预览
     generatePreview();
-    
+
     // 不再自动切换到自定义预设
     // 仅保存设置
     saveCurrentSettings();
@@ -245,19 +245,19 @@ export default function CompressionSettings() {
       ...advancedOptions,
       [option]: !advancedOptions[option],
     });
-    
+
     // 更新预览
     generatePreview();
-    
+
     // 不再自动切换到自定义预设
     // 仅保存设置
     saveCurrentSettings();
   };
-  
+
   // 处理质量变化
   const handleQualityChange = (value: number) => {
     setCompressionQuality(value);
-    
+
     // 直接构建设置对象并保存，避免使用状态中可能未更新的值
     const settings = {
       preset: activePreset,
@@ -273,39 +273,39 @@ export default function CompressionSettings() {
       outputFormat: outputFormat.toLowerCase(),
       fileNaming
     };
-    
+
     // 立即保存设置，然后更新预览
     saveCompressionSettings(settings).then(() => {
       generatePreview();
     });
   };
-  
+
   // 处理保持尺寸变化
   const handleKeepDimensionsChange = () => {
     setKeepDimensions(!keepDimensions);
-    
+
     // 更新预览
     generatePreview();
-    
+
     // 不再自动切换到自定义预设
     // 仅保存设置
     saveCurrentSettings();
   };
-  
+
   // 处理保持比例变化
   const handleKeepRatioChange = () => {
     setKeepRatio(!keepRatio);
-    
+
     // 不再自动切换到自定义预设
     // 仅保存设置
     saveCurrentSettings();
   };
-  
+
   // 处理保持格式变化
   const handleKeepFormatChange = () => {
     const newKeepFormat = !keepFormat;
     setKeepFormat(newKeepFormat);
-    
+
     // 直接构建设置对象并保存，避免使用状态中可能未更新的值
     const settings = {
       preset: activePreset,
@@ -321,25 +321,25 @@ export default function CompressionSettings() {
       outputFormat: outputFormat.toLowerCase(),
       fileNaming
     };
-    
+
     // 立即保存设置，然后更新预览
     saveCompressionSettings(settings).then(() => {
       generatePreview();
     });
   };
-  
+
   // 处理输出格式变化
   const handleOutputFormatChange = (format: string) => {
     // 在UI中显示大写格式
     setOutputFormat(format.toUpperCase());
 
-    
+
     // 确保设置keepFormat为false，允许选择输出格式
     setKeepFormat(false);
-    
+
     // 切换到自定义预设，确保设置能被保存
     setActivePreset('自定义');
-    
+
     // 直接构建设置对象并保存，避免使用状态中可能未更新的值
     const settings = {
       preset: '自定义', // 强制设为自定义预设
@@ -355,18 +355,18 @@ export default function CompressionSettings() {
       outputFormat: format.toLowerCase(), // 使用传入的format参数，确保正确保存
       fileNaming
     };
-    
+
 
     saveCompressionSettings(settings).then(() => {
       // 保存成功后更新预览
       generatePreview();
     });
   };
-  
+
   // 处理文件命名变化
   const handleFileNamingChange = (value: string) => {
     setFileNaming(value);
-    
+
     // 文件命名不应该影响预设类型，所以不再切换到自定义预设
     // 直接保存设置，不使用setTimeout延迟
     // 使用传入的value值而不是状态中的fileNaming，因为状态更新是异步的
@@ -384,17 +384,17 @@ export default function CompressionSettings() {
       outputFormat: outputFormat.toLowerCase(),
       fileNaming: value // 使用传入的新值
     };
-    
+
 
     saveCompressionSettings(settings);
   };
-  
+
   // 生成预览结果
   const generatePreview = async () => {
     try {
       // 计算压缩率
       const compressionRate = 100 - compressionQuality;
-      
+
       // 模拟压缩结果
       // 在实际应用中，这里可以调用后端API进行实时预览
       setPreviewResult({
@@ -408,7 +408,7 @@ export default function CompressionSettings() {
           savings: `${compressionRate}%`
         }
       });
-      
+
       // 不再自动保存设置，避免覆盖已保存的格式选择
     } catch (error) {
       console.error('生成预览失败:', error);
@@ -420,7 +420,7 @@ export default function CompressionSettings() {
     try {
       // 获取当前最新状态
 
-      
+
       // 构建设置对象
       const settings = {
         preset: activePreset,
@@ -436,7 +436,7 @@ export default function CompressionSettings() {
         outputFormat: outputFormat.toLowerCase(), // 确保保存小写的格式名称
         fileNaming
       };
-      
+
       // 直接保存设置，不再进行额外检查
       await saveCompressionSettings(settings);
     } catch (error) {
@@ -473,10 +473,10 @@ export default function CompressionSettings() {
       if (activePreset === '自定义') {
         return true;
       }
-      
+
       // 检查当前设置是否与预设不同
       const currentCompressionRate = 100 - compressionQuality;
-      
+
       switch (activePreset) {
         case '低压缩':
           return currentCompressionRate !== 20;
@@ -497,7 +497,7 @@ export default function CompressionSettings() {
     <div className="container mx-auto">
       <h2 className="text-2xl font-bold mb-2">压缩设置</h2>
       <p className="text-muted-foreground mb-6">配置图片压缩参数，选择合适的压缩级别和输出选项。</p>
-      
+
       {isLoading ? (
         <div className="flex justify-center items-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -509,7 +509,7 @@ export default function CompressionSettings() {
             <div className="bg-card rounded-lg border border-border shadow-sm p-6">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
                 <h3 className="text-lg font-semibold">压缩预设</h3>
-                
+
                 {/* 预览结果 */}
                 {previewResult && (
                   <div className="text-sm">
@@ -520,7 +520,7 @@ export default function CompressionSettings() {
                   </div>
                 )}
               </div>
-              
+
               <div className="flex flex-wrap gap-3 mb-6">
                 {[
                   { name: '轻度压缩', value: '低压缩', compressionRate: 20, quality: 80 },
@@ -529,28 +529,26 @@ export default function CompressionSettings() {
                 ].map((preset) => (
                   <button
                     key={preset.value}
-                    className={`px-4 py-2 rounded-md border transition-colors cursor-pointer ${
-                      activePreset === preset.value 
-                        ? 'bg-primary/10 border-primary text-primary' 
+                    className={`px-4 py-2 rounded-md border transition-colors cursor-pointer ${activePreset === preset.value
+                        ? 'bg-primary/10 border-primary text-primary'
                         : 'bg-primary/10 border-border hover:bg-primary/20'
-                    }`}
+                      }`}
                     onClick={() => handlePresetClick(preset.value)}
                   >
                     {preset.name}
                   </button>
                 ))}
                 <button
-                  className={`px-4 py-2 rounded-md border transition-colors cursor-pointer ${
-                    activePreset === '自定义' 
-                      ? 'bg-primary/10 border-primary text-primary' 
+                  className={`px-4 py-2 rounded-md border transition-colors cursor-pointer ${activePreset === '自定义'
+                      ? 'bg-primary/10 border-primary text-primary'
                       : 'bg-primary/10 border-border hover:bg-primary/20'
-                  }`}
+                    }`}
                   onClick={switchToCustomPreset}
                 >
                   自定义
                 </button>
               </div>
-              
+
               {/* 预设说明 */}
               <div className="mb-4 text-sm text-muted-foreground">
                 {activePreset === '低压缩' && (
@@ -566,7 +564,7 @@ export default function CompressionSettings() {
                   <p>自定义模式：根据您的需求自定义所有压缩参数。</p>
                 )}
               </div>
-              
+
               {/* 当前设置与预设不同时的提示 */}
               {activePreset !== '自定义' && isCustomSettings() && (
                 <div className="mb-4 p-2 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800 rounded-md text-sm">
@@ -575,7 +573,7 @@ export default function CompressionSettings() {
                   </p>
                 </div>
               )}
-              
+
               {/* 压缩质量滑块 */}
               <div className="mb-6">
                 <label className="block font-medium mb-1">压缩率</label>
@@ -592,7 +590,7 @@ export default function CompressionSettings() {
                   <span className="font-medium w-12 text-center">{100 - compressionQuality}%</span>
                 </div>
               </div>
-              
+
               {/* 图像尺寸 */}
               <div className="mb-6">
                 <label className="block font-medium mb-1">图像尺寸</label>
@@ -638,30 +636,39 @@ export default function CompressionSettings() {
                   </div>
                 </div>
               </div>
-              
+
               {/* 高级选项 */}
               <div className="mb-6">
                 <label className="block font-medium mb-1">文件命名示例</label>
-                <p className="text-sm text-muted-foreground mb-2">常用的文件命名模板</p>
+                <p className="text-sm text-muted-foreground mb-2">点击模板即可应用到下方的文件命名设置</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                  <div className="p-2 bg-primary/10 rounded-md">
-                    <code className="text-xs">{'{filename}_compressed'}</code>
-                  </div>
-                  <div className="p-2 bg-primary/10 rounded-md">
-                    <code className="text-xs">{'{filename}_{timestamp}'}</code>
-                  </div>
-                  <div className="p-2 bg-primary/10 rounded-md">
-                    <code className="text-xs">{'{filename}_optimized'}</code>
-                  </div>
-                  <div className="p-2 bg-primary/10 rounded-md">
-                    <code className="text-xs">compressed_{'{filename}'}</code>
-                  </div>
+                  {[
+                    { template: '{filename}', desc: '保持原文件名（覆盖）' },
+                    { template: '{filename}_{timestamp}', desc: '原文件名 + 时间戳' },
+                    { template: '{filename}_compressed', desc: '原文件名 + _compressed' },
+                    { template: '{filename}_optimized', desc: '原文件名 + _optimized' },
+                    { template: 'compressed_{filename}', desc: 'compressed_ + 原文件名' }
+                  ].map(({ template, desc }) => (
+                    <button
+                      key={template}
+                      type="button"
+                      title={desc}
+                      onClick={() => handleFileNamingChange(template)}
+                      className={`p-2 rounded-md text-left transition-colors cursor-pointer border ${fileNaming === template
+                          ? 'bg-primary/20 border-primary'
+                          : 'bg-primary/10 border-transparent hover:bg-primary/20'
+                        }`}
+                    >
+                      <code className="text-xs block break-all">{template}</code>
+                      <span className="text-[10px] text-muted-foreground">{desc}</span>
+                    </button>
+                  ))}
                 </div>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  <span className="font-medium">变量说明：</span> {'{filename}'} = 原文件名，{'{timestamp}'} = 时间戳
+                  <span className="font-medium">变量说明：</span> {'{filename}'} = 原文件名，{'{timestamp}'} = 时间戳（格式：YYYYMMDD_HHmmss）
                 </p>
               </div>
-              
+
               <div>
                 <label className="block font-medium mb-1">高级选项</label>
                 <p className="text-sm text-muted-foreground mb-2">这些功能暂时不开放</p>
@@ -702,13 +709,13 @@ export default function CompressionSettings() {
                 </div>
               </div>
             </div>
-            
+
             {/* 输出格式卡片 */}
             <div className="bg-card rounded-lg border border-border shadow-sm p-6">
               <div className="flex justify-between items-center mb-4 pb-2 border-b border-border">
                 <h3 className="text-lg font-semibold">输出格式</h3>
               </div>
-              
+
               <div className="mb-6">
                 <div className="flex items-center gap-2 mb-4">
                   <input
@@ -720,16 +727,15 @@ export default function CompressionSettings() {
                   />
                   <label htmlFor="keep-format">保持原始格式</label>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-2 mt-2">
                   {['JPEG', 'PNG', 'WebP', 'GIF'].map((format) => (
                     <button
                       key={format}
-                      className={`px-4 py-2 rounded-md border transition-colors cursor-pointer ${
-                        outputFormat.toUpperCase() === format.toUpperCase() && !keepFormat
-                          ? 'bg-primary/10 border-primary text-primary' 
+                      className={`px-4 py-2 rounded-md border transition-colors cursor-pointer ${outputFormat.toUpperCase() === format.toUpperCase() && !keepFormat
+                          ? 'bg-primary/10 border-primary text-primary'
                           : 'bg-primary/10 border-border hover:bg-primary/20'
-                      } ${keepFormat ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        } ${keepFormat ? 'opacity-50 cursor-not-allowed' : ''}`}
                       onClick={() => !keepFormat && handleOutputFormatChange(format)}
                       disabled={keepFormat}
                     >
@@ -737,7 +743,7 @@ export default function CompressionSettings() {
                     </button>
                   ))}
                 </div>
-                
+
                 {/* 格式说明 */}
                 <div className="mt-4 text-sm text-muted-foreground">
                   <p className="mb-1 font-medium">格式简介：</p>
@@ -759,13 +765,13 @@ export default function CompressionSettings() {
                       <p>支持动画，256色限制，简单图像适用</p>
                     </div>
                   </div>
-                  
+
                   <p className="mt-2 italic">
                     <span className="font-medium">提示：</span> 选择合适的格式可以获得最佳压缩效果
                   </p>
                 </div>
               </div>
-              
+
               {/* 文件命名 */}
               <div>
                 <label className="block font-medium mb-1">文件命名</label>

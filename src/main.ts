@@ -40,7 +40,7 @@ let mainWindow: BrowserWindow | null = null;
 const createWindow = () => {
   // 判断是否为生产环境
   const isProduction = process.env.NODE_ENV === 'production' || !MAIN_WINDOW_VITE_DEV_SERVER_URL;
-  
+
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 900,
@@ -51,7 +51,7 @@ const createWindow = () => {
     autoHideMenuBar: isProduction,
     frame: true,
     webPreferences: {
-      preload:  path.join(__dirname, 'preload.js'),
+      preload: path.join(__dirname, 'preload.js'),
       // 添加以下配置以禁用自动填充功能
       spellcheck: false,
       // 确保上下文隔离
@@ -82,7 +82,7 @@ const createWindow = () => {
   // 监听页面加载完成事件
   mainWindow.webContents.on('did-finish-load', () => {
     // 已删除日志
-    
+
     // 显示窗口
     mainWindow.show();
   });
@@ -99,13 +99,37 @@ const createWindow = () => {
 }
 
 
+// 计算导出目标路径：不允许覆盖时，自动追加序号，避免覆盖已存在的同名文件
+async function resolveExportPath(destPath: string, overwriteExisting: boolean): Promise<string> {
+  if (overwriteExisting) {
+    return destPath;
+  }
+
+  if (!existsSync(destPath)) {
+    return destPath;
+  }
+
+  const dir = path.dirname(destPath);
+  const ext = path.extname(destPath);
+  const baseName = path.basename(destPath, ext);
+
+  let index = 1;
+  let candidate = path.join(dir, `${baseName} (${index})${ext}`);
+  while (existsSync(candidate)) {
+    index++;
+    candidate = path.join(dir, `${baseName} (${index})${ext}`);
+  }
+
+  return candidate;
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', async () => {
   // 判断是否为生产环境
   const isProduction = process.env.NODE_ENV === 'production' || !MAIN_WINDOW_VITE_DEV_SERVER_URL;
-  
+
   // 在生产环境下禁用开发者工具
   if (isProduction) {
     // 设置默认窗口选项，禁用开发者工具
@@ -114,17 +138,17 @@ app.on('ready', async () => {
       window.webContents.on('devtools-opened', () => {
         window.webContents.closeDevTools();
       });
-      
+
       // 禁用右键菜单中的检查元素选项
       window.webContents.on('context-menu', (e, params) => {
         e.preventDefault();
       });
-      
+
       // 禁用所有可能打开开发者工具的快捷键
       window.webContents.on('before-input-event', (e, input) => {
         // 禁用F12、Ctrl+Shift+I、Ctrl+Shift+J、Ctrl+Shift+C等快捷键
         if (
-          input.key === 'F12' || 
+          input.key === 'F12' ||
           (input.control && input.shift && (input.key === 'I' || input.key === 'J' || input.key === 'C')) ||
           (input.control && input.alt && input.key === 'I')
         ) {
@@ -132,7 +156,7 @@ app.on('ready', async () => {
         }
       });
     });
-    
+
     // 禁用应用程序菜单，防止通过菜单打开开发者工具
     app.on('browser-window-focus', () => {
       if (process.platform !== 'darwin') {
@@ -140,11 +164,11 @@ app.on('ready', async () => {
         BrowserWindow.getFocusedWindow()?.setMenuBarVisibility(false);
       }
     });
-    
+
     // 完全禁用开发者工具
     app.commandLine.appendSwitch('disable-devtools');
   }
-  
+
   await ensureTempDir();
   initAllHandlers(); // 初始化所有IPC处理程序
 
@@ -152,13 +176,13 @@ app.on('ready', async () => {
   ipcMain.handle('get-image-data-url', async (_, filePath) => {
     try {
 
-      
+
       // 检查文件是否存在
       if (!existsSync(filePath)) {
 
         return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cGF0aCBkPSJNMTIgMkM2LjQ4IDIgMiA2LjQ4IDIgMTJzNC40OCAxMCAxMCAxMCAxMC00LjQ4IDEwLTEwUzE3LjUyIDIgMTIgMnptLTIgMTVsLTUtNSAxLjQxLTEuNDFMMTAgMTQuMTdsNy41OS03LjU5TDE5IDhsLTkgOXoiIGZpbGw9IiM5OTkiLz48L3N2Zz4=';
       }
-      
+
 
 
       // 读取文件
@@ -325,11 +349,11 @@ app.on('ready', async () => {
   // 注册导出所有文件的处理程序
   ipcMain.handle('export-all-files', async (_, args) => {
     try {
-      const { files, outputDir } = args;
+      const { files, outputDir, overwriteExisting = true } = args;
 
       for (const filePath of files) {
         const fileName = path.basename(filePath);
-        const destPath = path.join(outputDir, fileName);
+        const destPath = await resolveExportPath(path.join(outputDir, fileName), overwriteExisting);
         await fs.copyFile(filePath, destPath);
       }
 
@@ -346,7 +370,7 @@ app.on('ready', async () => {
       const result = await dialog.showOpenDialog({
         properties: ['openDirectory']
       });
-      
+
       return result;
     } catch (error) {
       console.error('选择文件夹失败:', error);
@@ -359,13 +383,13 @@ app.on('ready', async () => {
     try {
       const files = await fs.readdir(folderPath);
       const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp', '.tiff', '.tif'];
-      
+
       const imageFiles = [];
-      
+
       for (const file of files) {
         const filePath = path.join(folderPath, file);
         const stat = await fs.stat(filePath);
-        
+
         if (stat.isFile()) {
           const ext = path.extname(file).toLowerCase();
           if (imageExtensions.includes(ext)) {
@@ -373,7 +397,7 @@ app.on('ready', async () => {
           }
         }
       }
-      
+
       return imageFiles;
     } catch (error) {
       console.error('获取文件夹中的图片失败:', error);

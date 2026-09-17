@@ -78,8 +78,8 @@ declare global {
       };
     };
     compression: {
-      compressImage: (imagePath: string, settings: CompressionSettings, outputPath?: string) => Promise<CompressionResult>;
-      batchCompressImages: (imagePaths: string[], settings: CompressionSettings, outputDir?: string) => Promise<{
+      compressImage: (imagePath: string, settings: CompressionSettings, outputPath?: string, originalFilename?: string) => Promise<CompressionResult>;
+      batchCompressImages: (imagePaths: string[], settings: CompressionSettings, outputDir?: string, originalFilenames?: string[]) => Promise<{
         success: boolean;
         results: CompressionResult[];
         error?: string;
@@ -88,7 +88,7 @@ declare global {
       getCompressionPreset: (presetName: string) => Promise<CompressionSettings>;
       selectOutputDirectory: () => Promise<string | undefined>;
       clearTempFiles: () => Promise<any>;
-      deleteTempFile: (filePath: string) => Promise<{success: boolean; error?: string}>;
+      deleteTempFile: (filePath: string) => Promise<{ success: boolean; error?: string }>;
       onCompressionProgress: (callback: (data: {
         current: number;
         total: number;

@@ -15,11 +15,11 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes';
-  
+
   const k = 1024;
   const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
+
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
@@ -31,7 +31,7 @@ export function formatFileSize(bytes: number): string {
  */
 export function calculateCompressionRate(originalSize: number, compressedSize: number): string {
   if (originalSize === 0) return '0%';
-  
+
   const rate = ((originalSize - compressedSize) / originalSize) * 100;
   return `${rate.toFixed(1)}%`;
 }
@@ -46,48 +46,59 @@ export function getFileExtension(fileName: string): string {
 }
 
 /**
+ * 生成时间戳字符串（格式：YYYYMMDD_HHmmss）
+ * @param date 日期对象，默认为当前时间
+ * @returns 时间戳字符串
+ */
+export function generateTimestamp(date: Date = new Date()): string {
+  const pad = (value: number, length = 2) => value.toString().padStart(length, '0');
+  return `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+}
+
+/**
  * 根据命名模板生成输出文件名
  * @param originalPath 原始文件路径
- * @param fileNaming 文件命名模板
+ * @param fileNaming 文件命名模板（支持 {filename} 与 {timestamp} 变量）
  * @param outputFormat 输出格式
  * @param keepFormat 是否保持原始格式
+ * @param originalFilename 原始文件名（可选，用于临时文件路径恢复真实文件名）
  * @returns 生成的文件名
  */
 export function generateOutputFileName(
-  originalPath: string, 
+  originalPath: string,
   fileNaming = '{filename}_compressed',
   outputFormat?: string,
-  keepFormat = true
+  keepFormat = true,
+  originalFilename?: string
 ): string {
-  console.log('生成文件名，参数：', {
-    originalPath,
-    fileNaming,
-    outputFormat,
-    keepFormat
-  });
-  
-  const fileName = path.basename(originalPath);
-  const fileExt = path.extname(originalPath);
-  const fileNameWithoutExt = path.basename(fileName, fileExt);
+  // 优先使用传入的原始文件名：拖拽上传的文件会先保存为带时间戳前缀的临时文件，
+  // 若直接使用临时文件名，会导致“保持原文件名”等命名设置失效
+  const baseName = path.basename(originalFilename || originalPath);
+  const fileExt = path.extname(baseName);
+  const fileNameWithoutExt = path.basename(baseName, fileExt);
   const originalExt = fileExt.substring(1).toLowerCase(); // 去掉点号
-  
-  console.log('文件名分析：', {
-    fileName,
-    fileExt,
-    fileNameWithoutExt,
-    originalExt
-  });
-  
-  // 替换文件名模板中的变量
-  const outputFileName = fileNaming.replace('{filename}', fileNameWithoutExt);
-  
+
+  // 命名模板为空时回退到默认模板
+  const namingTemplate = fileNaming && fileNaming.trim() ? fileNaming : '{filename}_compressed';
+
+  // 替换文件名模板中的变量（全局替换，支持变量多次出现）
+  let outputFileName = namingTemplate
+    .split('{filename}').join(fileNameWithoutExt)
+    .split('{timestamp}').join(generateTimestamp());
+
+  // 清理文件名中的非法字符，避免生成系统不支持的文件名
+  outputFileName = outputFileName.replace(/[<>:"/\\|?*]/g, '_').trim();
+  if (!outputFileName) {
+    outputFileName = `${fileNameWithoutExt}_compressed`;
+  }
+
   // 根据是否保持原始格式决定扩展名
   const finalExt = keepFormat ? originalExt : (outputFormat || originalExt);
   const outputExtension = '.' + finalExt.toLowerCase();
-  
+
   const result = outputFileName + outputExtension;
   console.log('生成的文件名：', result);
-  
+
   return result;
 }
 
@@ -143,7 +154,7 @@ export async function getCompressionSettings(): Promise<any> {
   } catch (error) {
     console.error('获取压缩设置失败:', error);
   }
-  
+
   // 默认设置
   const defaultSettings = {
     preset: '低压缩',
@@ -159,7 +170,7 @@ export async function getCompressionSettings(): Promise<any> {
     outputFormat: 'PNG',
     fileNaming: '{filename}_compressed'
   };
-  
+
   console.log('使用默认设置:', defaultSettings);
   return defaultSettings;
 }
@@ -178,13 +189,13 @@ export function buildCompressionSettings(settings: any): CompressionSettings {
     optimizeColors: settings.optimizeColors || false,
     progressive: settings.progressive || false
   };
-  
+
   // 添加可选参数
   if (!compressionSettings.keepDimensions) {
     (compressionSettings as any).width = settings.width || 1920;
     (compressionSettings as any).height = settings.height || 1080;
   }
-  
+
   if (!compressionSettings.keepFormat) {
     // 确保输出格式是小写的
     (compressionSettings as any).outputFormat = settings.outputFormat ? settings.outputFormat.toLowerCase() : 'png';
@@ -193,9 +204,9 @@ export function buildCompressionSettings(settings: any): CompressionSettings {
     // 即使保持原始格式，也需要添加outputFormat，以便在generateOutputFileName中使用
     (compressionSettings as any).outputFormat = settings.outputFormat ? settings.outputFormat.toLowerCase() : 'png';
   }
-  
+
   // 添加文件命名设置
   (compressionSettings as any).fileNaming = settings.fileNaming || '{filename}_compressed';
-  
+
   return compressionSettings;
 } 
