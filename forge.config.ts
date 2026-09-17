@@ -1,3 +1,4 @@
+import { execSync } from 'child_process';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
@@ -8,6 +9,26 @@ import { VitePlugin } from '@electron-forge/plugin-vite';
 import { FusesPlugin } from '@electron-forge/plugin-fuses';
 import { FuseV1Options, FuseVersion } from '@electron/fuses';
 import { PublisherGithub } from '@electron-forge/publisher-github';
+
+/**
+ * 检测系统是否安装了 WiX Toolset v3（提供 candle.exe / light.exe）
+ * MSI 安装包由 maker-wix 构建，缺少该工具时自动禁用该 maker，
+ * 避免整个 make 流程失败，Setup.exe / ZIP 等其它安装包不受影响
+ */
+let wixToolsetAvailable: boolean | undefined;
+function hasWixToolset(): boolean {
+  if (wixToolsetAvailable === undefined) {
+    try {
+      execSync('candle -?', { stdio: 'ignore' });
+      execSync('light -?', { stdio: 'ignore' });
+      wixToolsetAvailable = true;
+    } catch {
+      wixToolsetAvailable = false;
+      console.warn('[forge] 未检测到 WiX Toolset（candle.exe/light.exe），已跳过 MSI 安装包构建；如需 MSI，请安装 WiX Toolset v3 并将其 bin 目录加入 PATH');
+    }
+  }
+  return wixToolsetAvailable;
+}
 
 const config: ForgeConfig = {
   packagerConfig: {
@@ -39,8 +60,10 @@ const config: ForgeConfig = {
       // 移除 codepage 配置，因为它不是 MakerSquirrelConfig 的有效属性
     }),
     // 添加WiX安装程序，支持选择安装路径
+    // 注意：MSI 构建依赖 WiX Toolset v3，未安装时自动禁用（见 hasWixToolset）
     {
       name: '@electron-forge/maker-wix',
+      enabled: hasWixToolset(),
       config: {
         name: "LocalSqueeze",
         description: "Image Compression Tool",
